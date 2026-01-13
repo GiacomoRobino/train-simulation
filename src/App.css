@@ -1,0 +1,124 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #1a1a2e;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+.simulation-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+h1 {
+  color: #ffffff;
+  margin-bottom: 60px;
+  font-size: 2.5rem;
+}
+
+.tracks-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+  padding: 0 20px;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 60px;
+}
+
+.track-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
+  border-radius: 4px;
+  transform: translateY(-50%);
+}
+
+.track-line::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    #5a5a5a 0px,
+    #5a5a5a 20px,
+    transparent 20px,
+    transparent 40px
+  );
+}
+
+.train {
+  position: absolute;
+  width: 80px;
+  height: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.red-train {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+  border: 2px solid #aa0000;
+}
+
+.blue-train {
+  background: linear-gradient(135deg, #4444ff, #0000cc);
+  border: 2px solid #0000aa;
+}
+
+.controls {
+  margin-top: 80px;
+  display: flex;
+  gap: 20px;
+}
+
+.control-btn {
+  padding: 15px 40px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
+
+.reset-btn {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+}
