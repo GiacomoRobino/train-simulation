@@ -12,20 +12,24 @@ function App() {
   const [redVelocity, setRedVelocity] = useState(0)
   const [redTime, setRedTime] = useState(0)
   const [redFinished, setRedFinished] = useState(false)
-  const [redStation, setRedStation] = useState(null)
+  const [redStations, setRedStations] = useState([])
   const [redAtStation, setRedAtStation] = useState(false)
+  const [redPlacingStation, setRedPlacingStation] = useState(false)
 
   // Blue train state
   const [bluePosition, setBluePosition] = useState(0)
   const [blueVelocity, setBlueVelocity] = useState(0)
   const [blueTime, setBlueTime] = useState(0)
   const [blueFinished, setBlueFinished] = useState(false)
-  const [blueStation, setBlueStation] = useState(null)
+  const [blueStations, setBlueStations] = useState([])
   const [blueAtStation, setBlueAtStation] = useState(false)
+  const [bluePlacingStation, setBluePlacingStation] = useState(false)
 
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
   const startTimeRef = useRef(null)
+  const redTrackRef = useRef(null)
+  const blueTrackRef = useRef(null)
 
   // Refs for animation
   const redRef = useRef({
@@ -34,7 +38,7 @@ function App() {
     finished: false,
     atStation: false,
     stationStopTime: 0,
-    passedStation: false,
+    passedStations: new Set(),
     finishedTime: null
   })
   const blueRef = useRef({
@@ -43,36 +47,48 @@ function App() {
     finished: false,
     atStation: false,
     stationStopTime: 0,
-    passedStation: false,
+    passedStations: new Set(),
     finishedTime: null
   })
 
   const TRAIN_WIDTH = 80
   const STATION_STOP_DURATION = 1 // seconds
 
-  const updateTrain = (state, station, trackWidth, deltaTime, maxSpd, accel) => {
-    const newState = { ...state }
+  const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel) => {
+    const newState = { ...state, passedStations: new Set(state.passedStations) }
 
     // If at station, handle stop
     if (newState.atStation) {
       newState.stationStopTime += deltaTime
       if (newState.stationStopTime >= STATION_STOP_DURATION) {
         newState.atStation = false
-        newState.passedStation = true
+        newState.currentStationPassed = true
       }
       return newState
+    }
+
+    // Mark current station as passed after leaving
+    if (newState.currentStationPassed && newState.currentStationIndex !== undefined) {
+      newState.passedStations.add(newState.currentStationIndex)
+      newState.currentStationPassed = false
+      newState.currentStationIndex = undefined
     }
 
     const currentPos = newState.position
     const currentVel = newState.velocity
 
-    // Find next target (station or end)
+    // Find next target (next station or end)
     let targetPos = trackWidth
+    let nextStationIndex = -1
 
-    if (station !== null && !newState.passedStation) {
-      const stationPos = station
-      if (currentPos < stationPos) {
-        targetPos = stationPos
+    // Sort stations and find the next one
+    const sortedStations = [...stations].map((pos, idx) => ({ pos, idx })).sort((a, b) => a.pos - b.pos)
+
+    for (const { pos, idx } of sortedStations) {
+      if (pos > currentPos && !newState.passedStations.has(idx)) {
+        targetPos = pos
+        nextStationIndex = idx
+        break
       }
     }
 
@@ -95,12 +111,13 @@ function App() {
 
     newPosition = currentPos + newVelocity * deltaTime
 
-    // Check if reached station
-    if (station !== null && !newState.passedStation && newPosition >= station && currentPos < station) {
-      newPosition = station
+    // Check if reached a station
+    if (nextStationIndex !== -1 && newPosition >= targetPos && currentPos < targetPos) {
+      newPosition = targetPos
       newVelocity = 0
       newState.atStation = true
       newState.stationStopTime = 0
+      newState.currentStationIndex = nextStationIndex
     }
 
     // Clamp to track end
@@ -136,7 +153,7 @@ function App() {
         // Update red train
         const redState = updateTrain(
           redRef.current,
-          redStation,
+          redStations,
           trackWidth,
           deltaTime,
           maxSpeed,
@@ -155,7 +172,7 @@ function App() {
         // Update blue train
         const blueState = updateTrain(
           blueRef.current,
-          blueStation,
+          blueStations,
           trackWidth,
           deltaTime,
           maxSpeed,
@@ -202,7 +219,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isRunning, isFinished, maxSpeed, acceleration, redStation, blueStation])
+  }, [isRunning, isFinished, maxSpeed, acceleration, redStations, blueStations])
 
   const handleStart = () => {
     setIsRunning(true)
@@ -225,13 +242,17 @@ function App() {
     setBlueFinished(false)
     setRedAtStation(false)
     setBlueAtStation(false)
+    setRedStations([])
+    setBlueStations([])
+    setRedPlacingStation(false)
+    setBluePlacingStation(false)
     redRef.current = {
       position: 0,
       velocity: 0,
       finished: false,
       atStation: false,
       stationStopTime: 0,
-      passedStation: false,
+      passedStations: new Set(),
       finishedTime: null
     }
     blueRef.current = {
@@ -240,21 +261,51 @@ function App() {
       finished: false,
       atStation: false,
       stationStopTime: 0,
-      passedStation: false,
+      passedStations: new Set(),
       finishedTime: null
     }
     lastTimeRef.current = null
     startTimeRef.current = null
   }
 
-  const addRedStation = () => {
-    const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
-    setRedStation(trackWidth / 2)
+  const handleAddRedStation = () => {
+    setRedPlacingStation(true)
+    setBluePlacingStation(false)
   }
 
-  const addBlueStation = () => {
-    const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
-    setBlueStation(trackWidth / 2)
+  const handleAddBlueStation = () => {
+    setBluePlacingStation(true)
+    setRedPlacingStation(false)
+  }
+
+  const handleRedTrackClick = (e) => {
+    if (!redPlacingStation || simulationStarted) return
+
+    const rect = redTrackRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+
+    // Ensure station is within valid bounds
+    const minPos = 20
+    const maxPos = rect.width - 20
+    const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
+
+    setRedStations(prev => [...prev, stationPos])
+    setRedPlacingStation(false)
+  }
+
+  const handleBlueTrackClick = (e) => {
+    if (!bluePlacingStation || simulationStarted) return
+
+    const rect = blueTrackRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+
+    // Ensure station is within valid bounds
+    const minPos = 20
+    const maxPos = rect.width - 20
+    const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
+
+    setBlueStations(prev => [...prev, stationPos])
+    setBluePlacingStation(false)
   }
 
   const formatTime = (time) => {
@@ -277,17 +328,21 @@ function App() {
             </div>
             <button
               className="station-btn red-station-btn"
-              onClick={addRedStation}
-              disabled={simulationStarted || redStation !== null}
+              onClick={handleAddRedStation}
+              disabled={simulationStarted}
             >
-              Add Station
+              {redPlacingStation ? 'Click on track...' : 'Add Station'}
             </button>
           </div>
-          <div className="track">
+          <div
+            className={`track ${redPlacingStation ? 'track-placing' : ''}`}
+            ref={redTrackRef}
+            onClick={handleRedTrackClick}
+          >
             <div className="track-line"></div>
-            {redStation !== null && (
-              <div className="station" style={{ left: `${redStation}px` }}></div>
-            )}
+            {redStations.map((pos, index) => (
+              <div key={index} className="station" style={{ left: `${pos}px` }}></div>
+            ))}
             <div
               className="train red-train"
               style={{ left: `${redPosition}px` }}
@@ -304,17 +359,21 @@ function App() {
             </div>
             <button
               className="station-btn blue-station-btn"
-              onClick={addBlueStation}
-              disabled={simulationStarted || blueStation !== null}
+              onClick={handleAddBlueStation}
+              disabled={simulationStarted}
             >
-              Add Station
+              {bluePlacingStation ? 'Click on track...' : 'Add Station'}
             </button>
           </div>
-          <div className="track">
+          <div
+            className={`track ${bluePlacingStation ? 'track-placing' : ''}`}
+            ref={blueTrackRef}
+            onClick={handleBlueTrackClick}
+          >
             <div className="track-line"></div>
-            {blueStation !== null && (
-              <div className="station" style={{ left: `${blueStation}px` }}></div>
-            )}
+            {blueStations.map((pos, index) => (
+              <div key={index} className="station" style={{ left: `${pos}px` }}></div>
+            ))}
             <div
               className="train blue-train"
               style={{ left: `${bluePosition}px` }}

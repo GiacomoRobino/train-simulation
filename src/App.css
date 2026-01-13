@@ -70,6 +70,14 @@ h1 {
   position: relative;
   width: 100%;
   height: 60px;
+  cursor: default;
+}
+
+.track-placing {
+  cursor: crosshair;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px rgba(76, 175, 80, 0.5);
 }
 
 .track-line {
