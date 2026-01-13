@@ -36,6 +36,17 @@ function App() {
   // Dragging state
   const [draggingStation, setDraggingStation] = useState(null)
 
+  // Configuration management
+  const [savedConfigs, setSavedConfigs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('savedConfigs')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+  const [selectedConfig, setSelectedConfig] = useState('')
+
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
   const startTimeRef = useRef(null)
@@ -63,6 +74,57 @@ function App() {
   })
 
   const TRAIN_WIDTH = 120
+
+  // Save configurations list to localStorage
+  useEffect(() => {
+    localStorage.setItem('savedConfigs', JSON.stringify(savedConfigs))
+  }, [savedConfigs])
+
+  const handleSaveConfig = () => {
+    const name = prompt('Enter configuration name:')
+    if (!name || !name.trim()) return
+
+    const newConfig = {
+      name: name.trim(),
+      redStations: redStations,
+      blueStations: blueStations,
+      redStationCount: redStationCount,
+      blueStationCount: blueStationCount
+    }
+
+    setSavedConfigs(prev => {
+      // Replace if name exists, otherwise add
+      const existing = prev.findIndex(c => c.name === name.trim())
+      if (existing >= 0) {
+        const updated = [...prev]
+        updated[existing] = newConfig
+        return updated
+      }
+      return [...prev, newConfig]
+    })
+    setSelectedConfig(name.trim())
+  }
+
+  const handleLoadConfig = (configName) => {
+    setSelectedConfig(configName)
+    if (!configName) return
+
+    const config = savedConfigs.find(c => c.name === configName)
+    if (config) {
+      setRedStations(config.redStations)
+      setBlueStations(config.blueStations)
+      setRedStationCount(config.redStationCount)
+      setBlueStationCount(config.blueStationCount)
+    }
+  }
+
+  const handleDeleteConfig = () => {
+    if (!selectedConfig) return
+    if (!confirm(`Delete configuration "${selectedConfig}"?`)) return
+
+    setSavedConfigs(prev => prev.filter(c => c.name !== selectedConfig))
+    setSelectedConfig('')
+  }
 
   const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel, stopDuration) => {
     const newState = { ...state, passedStations: new Set(state.passedStations) }
@@ -582,6 +644,35 @@ function App() {
           disabled={simulationStarted || (redStations.length === 0 && blueStations.length === 0)}
         >
           Clear Stations
+        </button>
+      </div>
+
+      <div className="config-container">
+        <label>Configuration:</label>
+        <select
+          value={selectedConfig}
+          onChange={(e) => handleLoadConfig(e.target.value)}
+          disabled={simulationStarted}
+          className="config-select"
+        >
+          <option value="">-- Select --</option>
+          {savedConfigs.map(config => (
+            <option key={config.name} value={config.name}>{config.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={handleSaveConfig}
+          className="config-btn save-config-btn"
+          disabled={simulationStarted}
+        >
+          Save
+        </button>
+        <button
+          onClick={handleDeleteConfig}
+          className="config-btn delete-config-btn"
+          disabled={simulationStarted || !selectedConfig}
+        >
+          Delete
         </button>
       </div>
 
