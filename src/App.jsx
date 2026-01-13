@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import pineroloImg from './assets/Pinerolo.png'
+import turinImg from './assets/Turin.png'
 
 function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
   const [maxSpeed, setMaxSpeed] = useState(120)
-  const [acceleration, setAcceleration] = useState(50)
+  const [acceleration, setAcceleration] = useState(100)
   const [stationStopDuration, setStationStopDuration] = useState(0.5)
 
   // Red train state
@@ -156,7 +158,7 @@ function App() {
         const deltaTime = (currentTime - lastTimeRef.current) / 1000
         lastTimeRef.current = currentTime
 
-        const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
+        const trackWidth = window.innerWidth - TRAIN_WIDTH - 40 - 120 // 120 for city markers (60px each side)
 
         // Update red train
         const redState = updateTrain(
@@ -297,11 +299,11 @@ function App() {
     if (!redPlacingStation || simulationStarted) return
 
     const rect = redTrackRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
+    const clickX = e.clientX - rect.left - 60 // Account for city marker offset
 
-    // Ensure station is within valid bounds
+    // Ensure station is within valid bounds (within the actual track area)
     const minPos = 20
-    const maxPos = rect.width - 20
+    const maxPos = rect.width - 120 - 20 // Subtract both city markers
     const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
 
     const newCount = redStationCount + 1
@@ -318,11 +320,11 @@ function App() {
     if (!bluePlacingStation || simulationStarted) return
 
     const rect = blueTrackRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
+    const clickX = e.clientX - rect.left - 60 // Account for city marker offset
 
-    // Ensure station is within valid bounds
+    // Ensure station is within valid bounds (within the actual track area)
     const minPos = 20
-    const maxPos = rect.width - 20
+    const maxPos = rect.width - 120 - 20 // Subtract both city markers
     const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
 
     const newCount = blueStationCount + 1
@@ -376,10 +378,10 @@ function App() {
 
     const trackRef = draggingStation.track === 'red' ? redTrackRef : blueTrackRef
     const rect = trackRef.current.getBoundingClientRect()
-    const newX = e.clientX - rect.left
+    const newX = e.clientX - rect.left - 60 // Account for city marker offset
 
     const minPos = 20
-    const maxPos = rect.width - 20
+    const maxPos = rect.width - 120 - 20 // Subtract both city markers
     const clampedPos = Math.max(minPos, Math.min(maxPos, newX))
 
     if (draggingStation.track === 'red') {
@@ -467,7 +469,7 @@ function App() {
 
   return (
     <div className="simulation-container">
-      <h1>Train Simulation</h1>
+      <h1>Train Simulation - Pinerolo edition</h1>
 
       <div className="tracks-container">
         <div className="track-wrapper">
@@ -490,12 +492,20 @@ function App() {
             ref={redTrackRef}
             onClick={handleRedTrackClick}
           >
+            <div className="city-marker city-start">
+              <img src={pineroloImg} alt="Pinerolo" />
+              <span>Pinerolo</span>
+            </div>
             <div className="track-line"></div>
             {redStations.map(station => renderStation(station, 'red'))}
             <div
               className="train red-train"
               style={{ left: `${redPosition}px` }}
             ></div>
+            <div className="city-marker city-end">
+              <img src={turinImg} alt="Turin" />
+              <span>Turin</span>
+            </div>
           </div>
         </div>
 
@@ -519,12 +529,20 @@ function App() {
             ref={blueTrackRef}
             onClick={handleBlueTrackClick}
           >
+            <div className="city-marker city-start">
+              <img src={pineroloImg} alt="Pinerolo" />
+              <span>Pinerolo</span>
+            </div>
             <div className="track-line"></div>
             {blueStations.map(station => renderStation(station, 'blue'))}
             <div
               className="train blue-train"
               style={{ left: `${bluePosition}px` }}
             ></div>
+            <div className="city-marker city-end">
+              <img src={turinImg} alt="Turin" />
+              <span>Turin</span>
+            </div>
           </div>
         </div>
       </div>
@@ -540,9 +558,9 @@ function App() {
             {redTime === blueTime ? (
               <span className="tie">It's a tie!</span>
             ) : redTime < blueTime ? (
-              <span className="winner red-timer">Red wins by {(blueTime - redTime).toFixed(2)}s</span>
+              <span className="winner red-timer">Red wins by {(blueTime - redTime).toFixed(2)}s ({(((blueTime - redTime) / blueTime) * 100).toFixed(1)}% faster)</span>
             ) : (
-              <span className="winner blue-timer">Blue wins by {(redTime - blueTime).toFixed(2)}s</span>
+              <span className="winner blue-timer">Blue wins by {(redTime - blueTime).toFixed(2)}s ({(((redTime - blueTime) / redTime) * 100).toFixed(1)}% faster)</span>
             )}
           </div>
         </div>
@@ -584,10 +602,10 @@ function App() {
           <label>Acceleration:</label>
           <div className="selector-options">
             {[
-              { value: 20, label: 'Slow' },
-              { value: 50, label: 'Normal' },
-              { value: 100, label: 'Fast' },
-              { value: 150, label: 'Dangerous' }
+              { value: 40, label: 'Slow' },
+              { value: 100, label: 'Normal' },
+              { value: 200, label: 'Fast' },
+              { value: 300, label: 'Dangerous' }
             ].map((option) => (
               <button
                 key={option.value}
