@@ -4,29 +4,117 @@ import './App.css'
 function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
-  const [redPosition, setRedPosition] = useState(0)
-  const [bluePosition, setBluePosition] = useState(0)
-  const [velocity, setVelocity] = useState(0)
   const [maxSpeed, setMaxSpeed] = useState(200)
   const [acceleration, setAcceleration] = useState(50)
+
+  // Red train state
+  const [redPosition, setRedPosition] = useState(0)
+  const [redVelocity, setRedVelocity] = useState(0)
   const [redTime, setRedTime] = useState(0)
-  const [blueTime, setBlueTime] = useState(0)
   const [redFinished, setRedFinished] = useState(false)
+  const [redStation, setRedStation] = useState(null)
+  const [redAtStation, setRedAtStation] = useState(false)
+
+  // Blue train state
+  const [bluePosition, setBluePosition] = useState(0)
+  const [blueVelocity, setBlueVelocity] = useState(0)
+  const [blueTime, setBlueTime] = useState(0)
   const [blueFinished, setBlueFinished] = useState(false)
+  const [blueStation, setBlueStation] = useState(null)
+  const [blueAtStation, setBlueAtStation] = useState(false)
 
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
-  const velocityRef = useRef(0)
-  const positionRef = useRef(0)
   const startTimeRef = useRef(null)
-  const redFinishedRef = useRef(false)
-  const blueFinishedRef = useRef(false)
+
+  // Refs for animation
+  const redRef = useRef({
+    position: 0,
+    velocity: 0,
+    finished: false,
+    atStation: false,
+    stationStopTime: 0,
+    passedStation: false,
+    finishedTime: null
+  })
+  const blueRef = useRef({
+    position: 0,
+    velocity: 0,
+    finished: false,
+    atStation: false,
+    stationStopTime: 0,
+    passedStation: false,
+    finishedTime: null
+  })
 
   const TRAIN_WIDTH = 80
+  const STATION_STOP_DURATION = 1 // seconds
 
-  useEffect(() => {
-    velocityRef.current = velocity
-  }, [velocity])
+  const updateTrain = (state, station, trackWidth, deltaTime, maxSpd, accel) => {
+    const newState = { ...state }
+
+    // If at station, handle stop
+    if (newState.atStation) {
+      newState.stationStopTime += deltaTime
+      if (newState.stationStopTime >= STATION_STOP_DURATION) {
+        newState.atStation = false
+        newState.passedStation = true
+      }
+      return newState
+    }
+
+    const currentPos = newState.position
+    const currentVel = newState.velocity
+
+    // Find next target (station or end)
+    let targetPos = trackWidth
+
+    if (station !== null && !newState.passedStation) {
+      const stationPos = station
+      if (currentPos < stationPos) {
+        targetPos = stationPos
+      }
+    }
+
+    // Calculate stopping distance: d = v² / (2 * a)
+    const stoppingDistance = (currentVel * currentVel) / (2 * accel)
+    const remainingDistance = targetPos - currentPos
+
+    let newVelocity
+    let newPosition
+
+    if (remainingDistance <= stoppingDistance && currentVel > 0) {
+      // Decelerate
+      newVelocity = Math.max(0, currentVel - accel * deltaTime)
+    } else if (currentVel < maxSpd) {
+      // Accelerate
+      newVelocity = Math.min(currentVel + accel * deltaTime, maxSpd)
+    } else {
+      newVelocity = currentVel
+    }
+
+    newPosition = currentPos + newVelocity * deltaTime
+
+    // Check if reached station
+    if (station !== null && !newState.passedStation && newPosition >= station && currentPos < station) {
+      newPosition = station
+      newVelocity = 0
+      newState.atStation = true
+      newState.stationStopTime = 0
+    }
+
+    // Clamp to track end
+    if (newPosition >= trackWidth) {
+      newPosition = trackWidth
+      newVelocity = 0
+      newState.finished = true
+    }
+
+    newState.position = newPosition
+    newState.velocity = newVelocity
+
+    return newState
+  }
 
   useEffect(() => {
     if (isRunning && !isFinished) {
@@ -44,65 +132,56 @@ function App() {
         lastTimeRef.current = currentTime
 
         const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
-        const currentPos = positionRef.current
-        const currentVel = velocityRef.current
 
-        // Calculate stopping distance: d = v² / (2 * a)
-        const stoppingDistance = (currentVel * currentVel) / (2 * acceleration)
-        const remainingDistance = trackWidth - currentPos
-
-        let newVelocity
-        let newPosition
-
-        if (remainingDistance <= stoppingDistance && currentVel > 0) {
-          // Decelerate
-          newVelocity = Math.max(0, currentVel - acceleration * deltaTime)
-        } else if (currentVel < maxSpeed) {
-          // Accelerate
-          newVelocity = Math.min(currentVel + acceleration * deltaTime, maxSpeed)
-        } else {
-          newVelocity = currentVel
+        // Update red train
+        const redState = updateTrain(
+          redRef.current,
+          redStation,
+          trackWidth,
+          deltaTime,
+          maxSpeed,
+          acceleration
+        )
+        redRef.current = redState
+        setRedPosition(redState.position)
+        setRedVelocity(redState.velocity)
+        setRedAtStation(redState.atStation)
+        if (redState.finished && !redRef.current.finishedTime) {
+          redRef.current.finishedTime = (currentTime - startTimeRef.current) / 1000
+          setRedFinished(true)
+          setRedTime(redRef.current.finishedTime)
         }
 
-        newPosition = currentPos + newVelocity * deltaTime
-
-        // Clamp to track end
-        if (newPosition >= trackWidth) {
-          newPosition = trackWidth
-          newVelocity = 0
+        // Update blue train
+        const blueState = updateTrain(
+          blueRef.current,
+          blueStation,
+          trackWidth,
+          deltaTime,
+          maxSpeed,
+          acceleration
+        )
+        blueRef.current = blueState
+        setBluePosition(blueState.position)
+        setBlueVelocity(blueState.velocity)
+        setBlueAtStation(blueState.atStation)
+        if (blueState.finished && !blueRef.current.finishedTime) {
+          blueRef.current.finishedTime = (currentTime - startTimeRef.current) / 1000
+          setBlueFinished(true)
+          setBlueTime(blueRef.current.finishedTime)
         }
 
-        velocityRef.current = newVelocity
-        positionRef.current = newPosition
-        setVelocity(newVelocity)
-        setRedPosition(newPosition)
-        setBluePosition(newPosition)
-
-        // Update timers
+        // Update timers for non-finished trains
         const elapsedTime = (currentTime - startTimeRef.current) / 1000
-
-        if (!redFinishedRef.current) {
-          if (newPosition >= trackWidth) {
-            redFinishedRef.current = true
-            setRedFinished(true)
-            setRedTime(elapsedTime)
-          } else {
-            setRedTime(elapsedTime)
-          }
+        if (!redRef.current.finished) {
+          setRedTime(elapsedTime)
+        }
+        if (!blueRef.current.finished) {
+          setBlueTime(elapsedTime)
         }
 
-        if (!blueFinishedRef.current) {
-          if (newPosition >= trackWidth) {
-            blueFinishedRef.current = true
-            setBlueFinished(true)
-            setBlueTime(elapsedTime)
-          } else {
-            setBlueTime(elapsedTime)
-          }
-        }
-
-        // Check if finished
-        if (newPosition >= trackWidth && newVelocity === 0) {
+        // Check if both finished
+        if (redState.finished && blueState.finished) {
           setIsFinished(true)
           setIsRunning(false)
           return
@@ -123,7 +202,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isRunning, isFinished, maxSpeed, acceleration])
+  }, [isRunning, isFinished, maxSpeed, acceleration, redStation, blueStation])
 
   const handleStart = () => {
     setIsRunning(true)
@@ -138,24 +217,51 @@ function App() {
     setIsFinished(false)
     setRedPosition(0)
     setBluePosition(0)
-    setVelocity(0)
+    setRedVelocity(0)
+    setBlueVelocity(0)
     setRedTime(0)
     setBlueTime(0)
     setRedFinished(false)
     setBlueFinished(false)
-    velocityRef.current = 0
-    positionRef.current = 0
+    setRedAtStation(false)
+    setBlueAtStation(false)
+    redRef.current = {
+      position: 0,
+      velocity: 0,
+      finished: false,
+      atStation: false,
+      stationStopTime: 0,
+      passedStation: false,
+      finishedTime: null
+    }
+    blueRef.current = {
+      position: 0,
+      velocity: 0,
+      finished: false,
+      atStation: false,
+      stationStopTime: 0,
+      passedStation: false,
+      finishedTime: null
+    }
     lastTimeRef.current = null
     startTimeRef.current = null
-    redFinishedRef.current = false
-    blueFinishedRef.current = false
+  }
+
+  const addRedStation = () => {
+    const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
+    setRedStation(trackWidth / 2)
+  }
+
+  const addBlueStation = () => {
+    const trackWidth = window.innerWidth - TRAIN_WIDTH - 40
+    setBlueStation(trackWidth / 2)
   }
 
   const formatTime = (time) => {
     return time.toFixed(2) + 's'
   }
 
-  const simulationStarted = isRunning || isFinished || velocity > 0 || redPosition > 0
+  const simulationStarted = isRunning || isFinished || redVelocity > 0 || redPosition > 0
 
   return (
     <div className="simulation-container">
@@ -163,12 +269,25 @@ function App() {
 
       <div className="tracks-container">
         <div className="track-wrapper">
-          <div className="track-timer red-timer">
-            {formatTime(redTime)}
-            {redFinished && ' ✓'}
+          <div className="track-header">
+            <div className="track-timer red-timer">
+              {formatTime(redTime)}
+              {redFinished && ' ✓'}
+              {redAtStation && ' (at station)'}
+            </div>
+            <button
+              className="station-btn red-station-btn"
+              onClick={addRedStation}
+              disabled={simulationStarted || redStation !== null}
+            >
+              Add Station
+            </button>
           </div>
           <div className="track">
             <div className="track-line"></div>
+            {redStation !== null && (
+              <div className="station" style={{ left: `${redStation}px` }}></div>
+            )}
             <div
               className="train red-train"
               style={{ left: `${redPosition}px` }}
@@ -177,12 +296,25 @@ function App() {
         </div>
 
         <div className="track-wrapper">
-          <div className="track-timer blue-timer">
-            {formatTime(blueTime)}
-            {blueFinished && ' ✓'}
+          <div className="track-header">
+            <div className="track-timer blue-timer">
+              {formatTime(blueTime)}
+              {blueFinished && ' ✓'}
+              {blueAtStation && ' (at station)'}
+            </div>
+            <button
+              className="station-btn blue-station-btn"
+              onClick={addBlueStation}
+              disabled={simulationStarted || blueStation !== null}
+            >
+              Add Station
+            </button>
           </div>
           <div className="track">
             <div className="track-line"></div>
+            {blueStation !== null && (
+              <div className="station" style={{ left: `${blueStation}px` }}></div>
+            )}
             <div
               className="train blue-train"
               style={{ left: `${bluePosition}px` }}
@@ -215,7 +347,7 @@ function App() {
           />
         </div>
         <div className="velocity-display">
-          Current Speed: {Math.round(velocity)} px/s
+          Red: {Math.round(redVelocity)} px/s | Blue: {Math.round(blueVelocity)} px/s
           {isFinished && ' - Finished!'}
         </div>
       </div>
