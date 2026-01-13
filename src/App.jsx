@@ -9,6 +9,7 @@ function App() {
   const [maxSpeed, setMaxSpeed] = useState(120)
   const [acceleration, setAcceleration] = useState(100)
   const [stationStopDuration, setStationStopDuration] = useState(0.5)
+  const [crossingSlowdown, setCrossingSlowdown] = useState(50) // percentage of max speed
 
   // Red train state
   const [redPosition, setRedPosition] = useState(0)
@@ -19,6 +20,9 @@ function App() {
   const [redAtStation, setRedAtStation] = useState(false)
   const [redPlacingStation, setRedPlacingStation] = useState(false)
   const [redStationCount, setRedStationCount] = useState(0)
+  const [redCrossings, setRedCrossings] = useState([])
+  const [redPlacingCrossing, setRedPlacingCrossing] = useState(false)
+  const [redCrossingCount, setRedCrossingCount] = useState(0)
 
   // Blue train state
   const [bluePosition, setBluePosition] = useState(0)
@@ -29,6 +33,9 @@ function App() {
   const [blueAtStation, setBlueAtStation] = useState(false)
   const [bluePlacingStation, setBluePlacingStation] = useState(false)
   const [blueStationCount, setBlueStationCount] = useState(0)
+  const [blueCrossings, setBlueCrossings] = useState([])
+  const [bluePlacingCrossing, setBluePlacingCrossing] = useState(false)
+  const [blueCrossingCount, setBlueCrossingCount] = useState(0)
 
   // Editing state
   const [editingStation, setEditingStation] = useState(null)
@@ -61,6 +68,7 @@ function App() {
     atStation: false,
     stationStopTime: 0,
     passedStations: new Set(),
+    passedCrossings: new Set(),
     finishedTime: null
   })
   const blueRef = useRef({
@@ -70,6 +78,7 @@ function App() {
     atStation: false,
     stationStopTime: 0,
     passedStations: new Set(),
+    passedCrossings: new Set(),
     finishedTime: null
   })
 
@@ -89,7 +98,11 @@ function App() {
       redStations: redStations,
       blueStations: blueStations,
       redStationCount: redStationCount,
-      blueStationCount: blueStationCount
+      blueStationCount: blueStationCount,
+      redCrossings: redCrossings,
+      blueCrossings: blueCrossings,
+      redCrossingCount: redCrossingCount,
+      blueCrossingCount: blueCrossingCount
     }
 
     setSavedConfigs(prev => {
@@ -111,10 +124,14 @@ function App() {
 
     const config = savedConfigs.find(c => c.name === configName)
     if (config) {
-      setRedStations(config.redStations)
-      setBlueStations(config.blueStations)
-      setRedStationCount(config.redStationCount)
-      setBlueStationCount(config.blueStationCount)
+      setRedStations(config.redStations || [])
+      setBlueStations(config.blueStations || [])
+      setRedStationCount(config.redStationCount || 0)
+      setBlueStationCount(config.blueStationCount || 0)
+      setRedCrossings(config.redCrossings || [])
+      setBlueCrossings(config.blueCrossings || [])
+      setRedCrossingCount(config.redCrossingCount || 0)
+      setBlueCrossingCount(config.blueCrossingCount || 0)
     }
   }
 
@@ -126,8 +143,12 @@ function App() {
     setSelectedConfig('')
   }
 
-  const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel, stopDuration) => {
-    const newState = { ...state, passedStations: new Set(state.passedStations) }
+  const updateTrain = (state, stations, crossings, trackWidth, deltaTime, maxSpd, accel, stopDuration, crossingSpeedPercent) => {
+    const newState = {
+      ...state,
+      passedStations: new Set(state.passedStations),
+      passedCrossings: new Set(state.passedCrossings || [])
+    }
 
     // If at station, handle stop
     if (newState.atStation) {
@@ -164,6 +185,31 @@ function App() {
       }
     }
 
+    // Find next crossing
+    let nextCrossing = null
+    const sortedCrossings = [...crossings].sort((a, b) => a.position - b.position)
+    for (const crossing of sortedCrossings) {
+      if (crossing.position > currentPos && !newState.passedCrossings.has(crossing.id)) {
+        nextCrossing = crossing
+        break
+      }
+    }
+
+    // Determine effective max speed based on crossing proximity
+    const crossingSpeed = maxSpd * (crossingSpeedPercent / 100)
+    let effectiveMaxSpeed = maxSpd
+
+    // If there's a crossing ahead, calculate slowdown distance
+    if (nextCrossing) {
+      const distanceToCrossing = nextCrossing.position - currentPos
+      // Calculate distance needed to slow down to crossing speed
+      const slowdownDistance = Math.abs((currentVel * currentVel - crossingSpeed * crossingSpeed) / (2 * accel))
+
+      if (distanceToCrossing <= slowdownDistance + 50) {
+        effectiveMaxSpeed = crossingSpeed
+      }
+    }
+
     // Calculate stopping distance: d = v² / (2 * a)
     const stoppingDistance = (currentVel * currentVel) / (2 * accel)
     const remainingDistance = targetPos - currentPos
@@ -172,16 +218,24 @@ function App() {
     let newPosition
 
     if (remainingDistance <= stoppingDistance && currentVel > 0) {
-      // Decelerate
+      // Decelerate for station/end
       newVelocity = Math.max(0, currentVel - accel * deltaTime)
-    } else if (currentVel < maxSpd) {
+    } else if (currentVel > effectiveMaxSpeed) {
+      // Decelerate for crossing
+      newVelocity = Math.max(effectiveMaxSpeed, currentVel - accel * deltaTime)
+    } else if (currentVel < effectiveMaxSpeed) {
       // Accelerate
-      newVelocity = Math.min(currentVel + accel * deltaTime, maxSpd)
+      newVelocity = Math.min(currentVel + accel * deltaTime, effectiveMaxSpeed)
     } else {
       newVelocity = currentVel
     }
 
     newPosition = currentPos + newVelocity * deltaTime
+
+    // Check if passed a crossing
+    if (nextCrossing && newPosition >= nextCrossing.position && currentPos < nextCrossing.position) {
+      newState.passedCrossings.add(nextCrossing.id)
+    }
 
     // Check if reached a station
     if (nextStationId !== null && newPosition >= targetPos && currentPos < targetPos) {
@@ -226,11 +280,13 @@ function App() {
         const redState = updateTrain(
           redRef.current,
           redStations,
+          redCrossings,
           trackWidth,
           deltaTime,
           maxSpeed,
           acceleration,
-          stationStopDuration
+          stationStopDuration,
+          crossingSlowdown
         )
         redRef.current = redState
         setRedPosition(redState.position)
@@ -246,11 +302,13 @@ function App() {
         const blueState = updateTrain(
           blueRef.current,
           blueStations,
+          blueCrossings,
           trackWidth,
           deltaTime,
           maxSpeed,
           acceleration,
-          stationStopDuration
+          stationStopDuration,
+          crossingSlowdown
         )
         blueRef.current = blueState
         setBluePosition(blueState.position)
@@ -293,7 +351,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isRunning, isFinished, maxSpeed, acceleration, redStations, blueStations, stationStopDuration])
+  }, [isRunning, isFinished, maxSpeed, acceleration, redStations, blueStations, redCrossings, blueCrossings, stationStopDuration, crossingSlowdown])
 
   const handleStart = () => {
     setIsRunning(true)
@@ -318,6 +376,8 @@ function App() {
     setBlueAtStation(false)
     setRedPlacingStation(false)
     setBluePlacingStation(false)
+    setRedPlacingCrossing(false)
+    setBluePlacingCrossing(false)
     redRef.current = {
       position: 0,
       velocity: 0,
@@ -325,6 +385,7 @@ function App() {
       atStation: false,
       stationStopTime: 0,
       passedStations: new Set(),
+      passedCrossings: new Set(),
       finishedTime: null
     }
     blueRef.current = {
@@ -334,6 +395,7 @@ function App() {
       atStation: false,
       stationStopTime: 0,
       passedStations: new Set(),
+      passedCrossings: new Set(),
       finishedTime: null
     }
     lastTimeRef.current = null
@@ -345,58 +407,104 @@ function App() {
     setBlueStations([])
     setRedStationCount(0)
     setBlueStationCount(0)
+    setRedCrossings([])
+    setBlueCrossings([])
+    setRedCrossingCount(0)
+    setBlueCrossingCount(0)
   }
 
   const handleAddRedStation = () => {
     setRedPlacingStation(true)
     setBluePlacingStation(false)
+    setRedPlacingCrossing(false)
+    setBluePlacingCrossing(false)
   }
 
   const handleAddBlueStation = () => {
     setBluePlacingStation(true)
     setRedPlacingStation(false)
+    setRedPlacingCrossing(false)
+    setBluePlacingCrossing(false)
+  }
+
+  const handleAddRedCrossing = () => {
+    setRedPlacingCrossing(true)
+    setBluePlacingCrossing(false)
+    setRedPlacingStation(false)
+    setBluePlacingStation(false)
+  }
+
+  const handleAddBlueCrossing = () => {
+    setBluePlacingCrossing(true)
+    setRedPlacingCrossing(false)
+    setRedPlacingStation(false)
+    setBluePlacingStation(false)
   }
 
   const handleRedTrackClick = (e) => {
-    if (!redPlacingStation || simulationStarted) return
+    if (simulationStarted) return
+    if (!redPlacingStation && !redPlacingCrossing) return
 
     const rect = redTrackRef.current.getBoundingClientRect()
     const clickX = e.clientX - rect.left - 60 // Account for city marker offset
 
-    // Ensure station is within valid bounds (within the actual track area)
+    // Ensure position is within valid bounds (within the actual track area)
     const minPos = 20
     const maxPos = rect.width - 120 - 20 // Subtract both city markers
-    const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
+    const pos = Math.max(minPos, Math.min(maxPos, clickX))
 
-    const newCount = redStationCount + 1
-    setRedStations(prev => [...prev, {
-      id: newCount,
-      position: stationPos,
-      name: `Station_${newCount}`
-    }])
-    setRedStationCount(newCount)
-    setRedPlacingStation(false)
+    if (redPlacingStation) {
+      const newCount = redStationCount + 1
+      setRedStations(prev => [...prev, {
+        id: newCount,
+        position: pos,
+        name: `Station_${newCount}`
+      }])
+      setRedStationCount(newCount)
+      setRedPlacingStation(false)
+    } else if (redPlacingCrossing) {
+      const newCount = redCrossingCount + 1
+      setRedCrossings(prev => [...prev, {
+        id: newCount,
+        position: pos,
+        name: `Crossing_${newCount}`
+      }])
+      setRedCrossingCount(newCount)
+      setRedPlacingCrossing(false)
+    }
   }
 
   const handleBlueTrackClick = (e) => {
-    if (!bluePlacingStation || simulationStarted) return
+    if (simulationStarted) return
+    if (!bluePlacingStation && !bluePlacingCrossing) return
 
     const rect = blueTrackRef.current.getBoundingClientRect()
     const clickX = e.clientX - rect.left - 60 // Account for city marker offset
 
-    // Ensure station is within valid bounds (within the actual track area)
+    // Ensure position is within valid bounds (within the actual track area)
     const minPos = 20
     const maxPos = rect.width - 120 - 20 // Subtract both city markers
-    const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
+    const pos = Math.max(minPos, Math.min(maxPos, clickX))
 
-    const newCount = blueStationCount + 1
-    setBlueStations(prev => [...prev, {
-      id: newCount,
-      position: stationPos,
-      name: `Station_${newCount}`
-    }])
-    setBlueStationCount(newCount)
-    setBluePlacingStation(false)
+    if (bluePlacingStation) {
+      const newCount = blueStationCount + 1
+      setBlueStations(prev => [...prev, {
+        id: newCount,
+        position: pos,
+        name: `Station_${newCount}`
+      }])
+      setBlueStationCount(newCount)
+      setBluePlacingStation(false)
+    } else if (bluePlacingCrossing) {
+      const newCount = blueCrossingCount + 1
+      setBlueCrossings(prev => [...prev, {
+        id: newCount,
+        position: pos,
+        name: `Crossing_${newCount}`
+      }])
+      setBlueCrossingCount(newCount)
+      setBluePlacingCrossing(false)
+    }
   }
 
   const handleDeleteRedStation = (id) => {
@@ -405,6 +513,14 @@ function App() {
 
   const handleDeleteBlueStation = (id) => {
     setBlueStations(prev => prev.filter(s => s.id !== id))
+  }
+
+  const handleDeleteRedCrossing = (id) => {
+    setRedCrossings(prev => prev.filter(c => c.id !== id))
+  }
+
+  const handleDeleteBlueCrossing = (id) => {
+    setBlueCrossings(prev => prev.filter(c => c.id !== id))
   }
 
   const handleEditStation = (track, id) => {
@@ -529,6 +645,29 @@ function App() {
     )
   }
 
+  const renderCrossing = (crossing, track) => {
+    return (
+      <div key={crossing.id} className="crossing-container" style={{ left: `${crossing.position}px` }}>
+        <div className="crossing-label">
+          <span className="crossing-name">{crossing.name}</span>
+          {!simulationStarted && (
+            <button
+              className="crossing-delete-btn"
+              onClick={() => track === 'red' ? handleDeleteRedCrossing(crossing.id) : handleDeleteBlueCrossing(crossing.id)}
+              title="Delete crossing"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="crossing">
+          <div className="crossing-bar"></div>
+          <div className="crossing-bar"></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="simulation-container">
       <h1>Train Simulation - Pinerolo edition</h1>
@@ -541,16 +680,25 @@ function App() {
               {redFinished && ' ✓'}
               {redAtStation && ' (at station)'}
             </div>
-            <button
-              className="station-btn red-station-btn"
-              onClick={handleAddRedStation}
-              disabled={simulationStarted}
-            >
-              {redPlacingStation ? 'Click on track...' : 'Add Station'}
-            </button>
+            <div className="track-buttons">
+              <button
+                className="station-btn red-station-btn"
+                onClick={handleAddRedStation}
+                disabled={simulationStarted}
+              >
+                {redPlacingStation ? 'Click on track...' : 'Add Station'}
+              </button>
+              <button
+                className="crossing-btn red-crossing-btn"
+                onClick={handleAddRedCrossing}
+                disabled={simulationStarted}
+              >
+                {redPlacingCrossing ? 'Click on track...' : 'Add Crossing'}
+              </button>
+            </div>
           </div>
           <div
-            className={`track ${redPlacingStation ? 'track-placing' : ''}`}
+            className={`track ${redPlacingStation || redPlacingCrossing ? 'track-placing' : ''}`}
             ref={redTrackRef}
             onClick={handleRedTrackClick}
           >
@@ -560,6 +708,7 @@ function App() {
             </div>
             <div className="track-line"></div>
             {redStations.map(station => renderStation(station, 'red'))}
+            {redCrossings.map(crossing => renderCrossing(crossing, 'red'))}
             <div
               className="train red-train"
               style={{ left: `${redPosition}px` }}
@@ -578,16 +727,25 @@ function App() {
               {blueFinished && ' ✓'}
               {blueAtStation && ' (at station)'}
             </div>
-            <button
-              className="station-btn blue-station-btn"
-              onClick={handleAddBlueStation}
-              disabled={simulationStarted}
-            >
-              {bluePlacingStation ? 'Click on track...' : 'Add Station'}
-            </button>
+            <div className="track-buttons">
+              <button
+                className="station-btn blue-station-btn"
+                onClick={handleAddBlueStation}
+                disabled={simulationStarted}
+              >
+                {bluePlacingStation ? 'Click on track...' : 'Add Station'}
+              </button>
+              <button
+                className="crossing-btn blue-crossing-btn"
+                onClick={handleAddBlueCrossing}
+                disabled={simulationStarted}
+              >
+                {bluePlacingCrossing ? 'Click on track...' : 'Add Crossing'}
+              </button>
+            </div>
           </div>
           <div
-            className={`track ${bluePlacingStation ? 'track-placing' : ''}`}
+            className={`track ${bluePlacingStation || bluePlacingCrossing ? 'track-placing' : ''}`}
             ref={blueTrackRef}
             onClick={handleBlueTrackClick}
           >
@@ -597,6 +755,7 @@ function App() {
             </div>
             <div className="track-line"></div>
             {blueStations.map(station => renderStation(station, 'blue'))}
+            {blueCrossings.map(crossing => renderCrossing(crossing, 'blue'))}
             <div
               className="train blue-train"
               style={{ left: `${bluePosition}px` }}
@@ -720,6 +879,21 @@ function App() {
                 disabled={simulationStarted}
               >
                 {value}s
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="selector-group">
+          <label>Crossing Slowdown:</label>
+          <div className="selector-options">
+            {[10, 25, 50, 75].map((value) => (
+              <button
+                key={value}
+                className={`selector-btn ${crossingSlowdown === value ? 'selected' : ''}`}
+                onClick={() => setCrossingSlowdown(value)}
+                disabled={simulationStarted}
+              >
+                {value}%
               </button>
             ))}
           </div>

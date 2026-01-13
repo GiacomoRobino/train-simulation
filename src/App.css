@@ -269,6 +269,85 @@ h1 {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.2);
 }
 
+.crossing-container {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+  margin-left: 60px;
+}
+
+.crossing-label {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.crossing-name {
+  color: #ff9800;
+  font-size: 0.9rem;
+  font-weight: bold;
+  background: rgba(26, 26, 46, 0.9);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.crossing-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: #f44336;
+  color: white;
+}
+
+.crossing-delete-btn:hover {
+  background: #d32f2f;
+}
+
+.crossing {
+  width: 40px;
+  height: 50px;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.crossing-bar {
+  width: 6px;
+  height: 50px;
+  background: linear-gradient(
+    to bottom,
+    #ff0000 0%,
+    #ff0000 20%,
+    #ffffff 20%,
+    #ffffff 40%,
+    #ff0000 40%,
+    #ff0000 60%,
+    #ffffff 60%,
+    #ffffff 80%,
+    #ff0000 80%,
+    #ff0000 100%
+  );
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 .station-btn {
   padding: 8px 16px;
   font-size: 0.9rem;
@@ -297,6 +376,41 @@ h1 {
 
 .blue-station-btn {
   background: linear-gradient(135deg, #6666ff, #3333cc);
+}
+
+.track-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.crossing-btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.crossing-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.crossing-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.red-crossing-btn {
+  background: linear-gradient(135deg, #ff9933, #cc6600);
+}
+
+.blue-crossing-btn {
+  background: linear-gradient(135deg, #33ccff, #0099cc);
 }
 
 .sliders-container {
