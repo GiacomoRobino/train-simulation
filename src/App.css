@@ -285,3 +285,7 @@ h1 {
 .reset-btn {
   background: linear-gradient(135deg, #ff9800, #f57c00);
 }
+
+.clear-btn {
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}

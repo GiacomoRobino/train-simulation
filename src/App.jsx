@@ -242,8 +242,6 @@ function App() {
     setBlueFinished(false)
     setRedAtStation(false)
     setBlueAtStation(false)
-    setRedStations([])
-    setBlueStations([])
     setRedPlacingStation(false)
     setBluePlacingStation(false)
     redRef.current = {
@@ -266,6 +264,11 @@ function App() {
     }
     lastTimeRef.current = null
     startTimeRef.current = null
+  }
+
+  const handleClearStations = () => {
+    setRedStations([])
+    setBlueStations([])
   }
 
   const handleAddRedStation = () => {
@@ -420,6 +423,13 @@ function App() {
         </button>
         <button onClick={handleReset} className="control-btn reset-btn">
           Reset
+        </button>
+        <button
+          onClick={handleClearStations}
+          className="control-btn clear-btn"
+          disabled={simulationStarted || (redStations.length === 0 && blueStations.length === 0)}
+        >
+          Clear Stations
         </button>
       </div>
     </div>
