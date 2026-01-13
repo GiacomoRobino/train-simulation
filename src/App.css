@@ -69,9 +69,9 @@ h1 {
 .track {
   position: relative;
   width: 100%;
-  height: 80px;
+  height: 100px;
   cursor: default;
-  margin-top: 40px;
+  margin-top: 50px;
 }
 
 .track-placing {
@@ -110,22 +110,23 @@ h1 {
 
 .train {
   position: absolute;
-  width: 80px;
-  height: 40px;
+  width: 120px;
+  height: 70px;
   top: 50%;
   transform: translateY(-50%);
-  border-radius: 4px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background-image: url('./assets/train.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
 .red-train {
-  background: linear-gradient(135deg, #ff4444, #cc0000);
-  border: 2px solid #aa0000;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)) hue-rotate(-10deg) saturate(1.5);
 }
 
 .blue-train {
-  background: linear-gradient(135deg, #4444ff, #0000cc);
-  border: 2px solid #0000aa;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)) hue-rotate(200deg) saturate(1.2);
 }
 
 .station-container {

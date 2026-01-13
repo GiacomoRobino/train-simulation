@@ -57,7 +57,7 @@ function App() {
     finishedTime: null
   })
 
-  const TRAIN_WIDTH = 80
+  const TRAIN_WIDTH = 120
 
   const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel, stopDuration) => {
     const newState = { ...state, passedStations: new Set(state.passedStations) }
@@ -474,6 +474,25 @@ function App() {
         </div>
       </div>
 
+      <div className="controls">
+        <button onClick={handleStart} className="control-btn start-btn" disabled={isRunning || isFinished}>
+          Start
+        </button>
+        <button onClick={handleStop} className="control-btn stop-btn" disabled={!isRunning}>
+          Stop
+        </button>
+        <button onClick={handleReset} className="control-btn reset-btn">
+          Reset
+        </button>
+        <button
+          onClick={handleClearStations}
+          className="control-btn clear-btn"
+          disabled={simulationStarted || (redStations.length === 0 && blueStations.length === 0)}
+        >
+          Clear Stations
+        </button>
+      </div>
+
       <div className="sliders-container">
         <div className="slider-group">
           <label>Max Speed: {maxSpeed} km/h</label>
@@ -526,25 +545,6 @@ function App() {
           Red: {Math.round(redVelocity)} px/s | Blue: {Math.round(blueVelocity)} px/s
           {isFinished && ' - Finished!'}
         </div>
-      </div>
-
-      <div className="controls">
-        <button onClick={handleStart} className="control-btn start-btn" disabled={isRunning || isFinished}>
-          Start
-        </button>
-        <button onClick={handleStop} className="control-btn stop-btn" disabled={!isRunning}>
-          Stop
-        </button>
-        <button onClick={handleReset} className="control-btn reset-btn">
-          Reset
-        </button>
-        <button
-          onClick={handleClearStations}
-          className="control-btn clear-btn"
-          disabled={simulationStarted || (redStations.length === 0 && blueStations.length === 0)}
-        >
-          Clear Stations
-        </button>
       </div>
     </div>
   )
