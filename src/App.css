@@ -34,8 +34,29 @@ h1 {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 60px;
+  gap: 40px;
   padding: 0 20px;
+}
+
+.track-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.track-timer {
+  font-size: 1.2rem;
+  font-weight: bold;
+  font-family: monospace;
+  padding-left: 10px;
+}
+
+.red-timer {
+  color: #ff6666;
+}
+
+.blue-timer {
+  color: #6666ff;
 }
 
 .track {

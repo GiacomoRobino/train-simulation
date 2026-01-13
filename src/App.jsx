@@ -9,11 +9,18 @@ function App() {
   const [velocity, setVelocity] = useState(0)
   const [maxSpeed, setMaxSpeed] = useState(200)
   const [acceleration, setAcceleration] = useState(50)
+  const [redTime, setRedTime] = useState(0)
+  const [blueTime, setBlueTime] = useState(0)
+  const [redFinished, setRedFinished] = useState(false)
+  const [blueFinished, setBlueFinished] = useState(false)
 
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
   const velocityRef = useRef(0)
   const positionRef = useRef(0)
+  const startTimeRef = useRef(null)
+  const redFinishedRef = useRef(false)
+  const blueFinishedRef = useRef(false)
 
   const TRAIN_WIDTH = 80
 
@@ -24,6 +31,9 @@ function App() {
   useEffect(() => {
     if (isRunning && !isFinished) {
       lastTimeRef.current = performance.now()
+      if (startTimeRef.current === null) {
+        startTimeRef.current = performance.now()
+      }
 
       const animate = (currentTime) => {
         if (lastTimeRef.current === null) {
@@ -68,6 +78,29 @@ function App() {
         setRedPosition(newPosition)
         setBluePosition(newPosition)
 
+        // Update timers
+        const elapsedTime = (currentTime - startTimeRef.current) / 1000
+
+        if (!redFinishedRef.current) {
+          if (newPosition >= trackWidth) {
+            redFinishedRef.current = true
+            setRedFinished(true)
+            setRedTime(elapsedTime)
+          } else {
+            setRedTime(elapsedTime)
+          }
+        }
+
+        if (!blueFinishedRef.current) {
+          if (newPosition >= trackWidth) {
+            blueFinishedRef.current = true
+            setBlueFinished(true)
+            setBlueTime(elapsedTime)
+          } else {
+            setBlueTime(elapsedTime)
+          }
+        }
+
         // Check if finished
         if (newPosition >= trackWidth && newVelocity === 0) {
           setIsFinished(true)
@@ -106,9 +139,20 @@ function App() {
     setRedPosition(0)
     setBluePosition(0)
     setVelocity(0)
+    setRedTime(0)
+    setBlueTime(0)
+    setRedFinished(false)
+    setBlueFinished(false)
     velocityRef.current = 0
     positionRef.current = 0
     lastTimeRef.current = null
+    startTimeRef.current = null
+    redFinishedRef.current = false
+    blueFinishedRef.current = false
+  }
+
+  const formatTime = (time) => {
+    return time.toFixed(2) + 's'
   }
 
   const simulationStarted = isRunning || isFinished || velocity > 0 || redPosition > 0
@@ -118,20 +162,32 @@ function App() {
       <h1>Train Simulation</h1>
 
       <div className="tracks-container">
-        <div className="track">
-          <div className="track-line"></div>
-          <div
-            className="train red-train"
-            style={{ left: `${redPosition}px` }}
-          ></div>
+        <div className="track-wrapper">
+          <div className="track-timer red-timer">
+            {formatTime(redTime)}
+            {redFinished && ' ✓'}
+          </div>
+          <div className="track">
+            <div className="track-line"></div>
+            <div
+              className="train red-train"
+              style={{ left: `${redPosition}px` }}
+            ></div>
+          </div>
         </div>
 
-        <div className="track">
-          <div className="track-line"></div>
-          <div
-            className="train blue-train"
-            style={{ left: `${bluePosition}px` }}
-          ></div>
+        <div className="track-wrapper">
+          <div className="track-timer blue-timer">
+            {formatTime(blueTime)}
+            {blueFinished && ' ✓'}
+          </div>
+          <div className="track">
+            <div className="track-line"></div>
+            <div
+              className="train blue-train"
+              style={{ left: `${bluePosition}px` }}
+            ></div>
+          </div>
         </div>
       </div>
 
