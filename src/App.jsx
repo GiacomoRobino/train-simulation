@@ -702,13 +702,15 @@ function App() {
         <div className="crossing-label">
           <span className="crossing-name">{crossing.name}</span>
           {!simulationStarted && (
-            <button
-              className="crossing-delete-btn"
-              onClick={() => track === 'red' ? handleDeleteRedCrossing(crossing.id) : handleDeleteBlueCrossing(crossing.id)}
-              title="Delete crossing"
-            >
-              ×
-            </button>
+            <div className="crossing-buttons">
+              <button
+                className="crossing-delete-btn"
+                onClick={() => track === 'red' ? handleDeleteRedCrossing(crossing.id) : handleDeleteBlueCrossing(crossing.id)}
+                title="Delete crossing"
+              >
+                ×
+              </button>
+            </div>
           )}
         </div>
         <div

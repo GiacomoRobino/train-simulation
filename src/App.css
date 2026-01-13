@@ -289,6 +289,7 @@ h1 {
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+  z-index: 20;
 }
 
 .crossing-name {
@@ -298,6 +299,11 @@ h1 {
   background: rgba(26, 26, 46, 0.9);
   padding: 4px 10px;
   border-radius: 4px;
+}
+
+.crossing-buttons {
+  display: flex;
+  gap: 6px;
 }
 
 .crossing-delete-btn {
@@ -313,6 +319,7 @@ h1 {
   transition: all 0.2s ease;
   background: #f44336;
   color: white;
+  z-index: 20;
 }
 
 .crossing-delete-btn:hover {
