@@ -52,7 +52,7 @@ h1 {
 }
 
 .track-timer {
-  font-size: 1.2rem;
+  font-size: 2rem;
   font-weight: bold;
   font-family: monospace;
   padding-left: 10px;
@@ -215,6 +215,22 @@ h1 {
   border: 3px solid #1B5E20;
   border-radius: 50%;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.station-draggable {
+  cursor: grab;
+}
+
+.station-draggable:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4), inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.station-dragging {
+  cursor: grabbing;
+  transform: translateY(-50%) scale(1.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.2);
 }
 
 .station-btn {
@@ -376,8 +392,48 @@ h1 {
   margin-top: 10px;
 }
 
+.results {
+  margin-top: 30px;
+  padding: 20px 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.results h2 {
+  color: #ffffff;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.results-times {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+.results-difference {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.results-difference .tie {
+  color: #ffeb3b;
+}
+
+.results-difference .winner {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 .controls {
-  margin-top: 40px;
+  margin-top: 30px;
   display: flex;
   gap: 20px;
 }

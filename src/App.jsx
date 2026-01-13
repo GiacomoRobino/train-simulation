@@ -31,6 +31,9 @@ function App() {
   // Editing state
   const [editingStation, setEditingStation] = useState(null)
 
+  // Dragging state
+  const [draggingStation, setDraggingStation] = useState(null)
+
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
   const startTimeRef = useRef(null)
@@ -362,6 +365,54 @@ function App() {
     }
   }
 
+  const handleDragStart = (e, track, id) => {
+    if (simulationStarted) return
+    e.preventDefault()
+    setDraggingStation({ track, id })
+  }
+
+  const handleDragMove = (e) => {
+    if (!draggingStation) return
+
+    const trackRef = draggingStation.track === 'red' ? redTrackRef : blueTrackRef
+    const rect = trackRef.current.getBoundingClientRect()
+    const newX = e.clientX - rect.left
+
+    const minPos = 20
+    const maxPos = rect.width - 20
+    const clampedPos = Math.max(minPos, Math.min(maxPos, newX))
+
+    if (draggingStation.track === 'red') {
+      setRedStations(prev => prev.map(s =>
+        s.id === draggingStation.id ? { ...s, position: clampedPos } : s
+      ))
+    } else {
+      setBlueStations(prev => prev.map(s =>
+        s.id === draggingStation.id ? { ...s, position: clampedPos } : s
+      ))
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDraggingStation(null)
+  }
+
+  // Global mouse event listeners for drag and drop
+  useEffect(() => {
+    if (draggingStation) {
+      const onMouseMove = (e) => handleDragMove(e)
+      const onMouseUp = () => handleDragEnd()
+
+      document.addEventListener('mousemove', onMouseMove)
+      document.addEventListener('mouseup', onMouseUp)
+
+      return () => {
+        document.removeEventListener('mousemove', onMouseMove)
+        document.removeEventListener('mouseup', onMouseUp)
+      }
+    }
+  }, [draggingStation])
+
   const formatTime = (time) => {
     return time.toFixed(2) + 's'
   }
@@ -370,6 +421,7 @@ function App() {
 
   const renderStation = (station, track) => {
     const isEditing = editingStation?.track === track && editingStation?.id === station.id
+    const isDragging = draggingStation?.track === track && draggingStation?.id === station.id
 
     return (
       <div key={station.id} className="station-container" style={{ left: `${station.position}px` }}>
@@ -405,7 +457,10 @@ function App() {
             </div>
           )}
         </div>
-        <div className="station"></div>
+        <div
+          className={`station ${!simulationStarted ? 'station-draggable' : ''} ${isDragging ? 'station-dragging' : ''}`}
+          onMouseDown={(e) => handleDragStart(e, track, station.id)}
+        ></div>
       </div>
     )
   }
@@ -473,6 +528,25 @@ function App() {
           </div>
         </div>
       </div>
+
+      {isFinished && (
+        <div className="results">
+          <h2>Results</h2>
+          <div className="results-times">
+            <span className="red-timer">Red: {formatTime(redTime)}</span>
+            <span className="blue-timer">Blue: {formatTime(blueTime)}</span>
+          </div>
+          <div className="results-difference">
+            {redTime === blueTime ? (
+              <span className="tie">It's a tie!</span>
+            ) : redTime < blueTime ? (
+              <span className="winner red-timer">Red wins by {(blueTime - redTime).toFixed(2)}s</span>
+            ) : (
+              <span className="winner blue-timer">Blue wins by {(redTime - blueTime).toFixed(2)}s</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="controls">
         <button onClick={handleStart} className="control-btn start-btn" disabled={isRunning || isFinished}>
