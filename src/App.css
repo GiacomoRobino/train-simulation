@@ -278,6 +278,20 @@ h1 {
   cursor: not-allowed;
 }
 
+.selector-btn.danger {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.selector-btn.danger:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.selector-btn.danger.selected {
+  background: #f44336;
+  color: white;
+}
+
 .velocity-display {
   color: #aaaaaa;
   font-size: 0.9rem;

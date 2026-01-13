@@ -4,7 +4,7 @@ import './App.css'
 function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
-  const [maxSpeed, setMaxSpeed] = useState(200)
+  const [maxSpeed, setMaxSpeed] = useState(120)
   const [acceleration, setAcceleration] = useState(50)
   const [stationStopDuration, setStationStopDuration] = useState(0.5)
 
@@ -389,31 +389,41 @@ function App() {
 
       <div className="sliders-container">
         <div className="slider-group">
-          <label>Max Speed: {maxSpeed} px/s</label>
+          <label>Max Speed: {maxSpeed} km/h</label>
           <input
             type="range"
-            min="50"
-            max="500"
+            min="80"
+            max="200"
+            step="10"
             value={maxSpeed}
             onChange={(e) => setMaxSpeed(Number(e.target.value))}
             disabled={simulationStarted}
           />
         </div>
-        <div className="slider-group">
-          <label>Acceleration: {acceleration} px/s²</label>
-          <input
-            type="range"
-            min="10"
-            max="200"
-            value={acceleration}
-            onChange={(e) => setAcceleration(Number(e.target.value))}
-            disabled={simulationStarted}
-          />
+        <div className="selector-group">
+          <label>Acceleration:</label>
+          <div className="selector-options">
+            {[
+              { value: 20, label: 'Slow' },
+              { value: 50, label: 'Normal' },
+              { value: 100, label: 'Fast' },
+              { value: 150, label: 'Dangerous' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                className={`selector-btn ${option.label === 'Dangerous' ? 'danger' : ''} ${acceleration === option.value ? 'selected' : ''}`}
+                onClick={() => setAcceleration(option.value)}
+                disabled={simulationStarted}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="selector-group">
           <label>Station Stop Time:</label>
           <div className="selector-options">
-            {[0.5, 1, 1.5, 2].map((value) => (
+            {[0.2, 0.5, 1, 1.5, 2].map((value) => (
               <button
                 key={value}
                 className={`selector-btn ${stationStopDuration === value ? 'selected' : ''}`}
