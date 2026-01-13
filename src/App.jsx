@@ -42,6 +42,7 @@ function App() {
 
   // Dragging state
   const [draggingStation, setDraggingStation] = useState(null)
+  const [draggingCrossing, setDraggingCrossing] = useState(null)
 
   // Configuration management
   const [savedConfigs, setSavedConfigs] = useState(() => {
@@ -577,6 +578,38 @@ function App() {
     setDraggingStation(null)
   }
 
+  const handleCrossingDragStart = (e, track, id) => {
+    if (simulationStarted) return
+    e.preventDefault()
+    setDraggingCrossing({ track, id })
+  }
+
+  const handleCrossingDragMove = (e) => {
+    if (!draggingCrossing) return
+
+    const trackRef = draggingCrossing.track === 'red' ? redTrackRef : blueTrackRef
+    const rect = trackRef.current.getBoundingClientRect()
+    const newX = e.clientX - rect.left - 60 // Account for city marker offset
+
+    const minPos = 20
+    const maxPos = rect.width - 120 - 20 // Subtract both city markers
+    const clampedPos = Math.max(minPos, Math.min(maxPos, newX))
+
+    if (draggingCrossing.track === 'red') {
+      setRedCrossings(prev => prev.map(c =>
+        c.id === draggingCrossing.id ? { ...c, position: clampedPos } : c
+      ))
+    } else {
+      setBlueCrossings(prev => prev.map(c =>
+        c.id === draggingCrossing.id ? { ...c, position: clampedPos } : c
+      ))
+    }
+  }
+
+  const handleCrossingDragEnd = () => {
+    setDraggingCrossing(null)
+  }
+
   // Global mouse event listeners for drag and drop
   useEffect(() => {
     if (draggingStation) {
@@ -592,6 +625,22 @@ function App() {
       }
     }
   }, [draggingStation])
+
+  // Global mouse event listeners for crossing drag and drop
+  useEffect(() => {
+    if (draggingCrossing) {
+      const onMouseMove = (e) => handleCrossingDragMove(e)
+      const onMouseUp = () => handleCrossingDragEnd()
+
+      document.addEventListener('mousemove', onMouseMove)
+      document.addEventListener('mouseup', onMouseUp)
+
+      return () => {
+        document.removeEventListener('mousemove', onMouseMove)
+        document.removeEventListener('mouseup', onMouseUp)
+      }
+    }
+  }, [draggingCrossing])
 
   const formatTime = (time) => {
     return time.toFixed(2) + 's'
@@ -646,6 +695,8 @@ function App() {
   }
 
   const renderCrossing = (crossing, track) => {
+    const isDragging = draggingCrossing?.track === track && draggingCrossing?.id === crossing.id
+
     return (
       <div key={crossing.id} className="crossing-container" style={{ left: `${crossing.position}px` }}>
         <div className="crossing-label">
@@ -660,7 +711,10 @@ function App() {
             </button>
           )}
         </div>
-        <div className="crossing">
+        <div
+          className={`crossing ${!simulationStarted ? 'crossing-draggable' : ''} ${isDragging ? 'crossing-dragging' : ''}`}
+          onMouseDown={(e) => handleCrossingDragStart(e, track, crossing.id)}
+        >
           <div className="crossing-bar"></div>
           <div className="crossing-bar"></div>
         </div>
