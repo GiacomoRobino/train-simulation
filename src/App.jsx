@@ -410,17 +410,20 @@ function App() {
             disabled={simulationStarted}
           />
         </div>
-        <div className="slider-group">
-          <label>Station Stop: {stationStopDuration}s</label>
-          <input
-            type="range"
-            min="0.5"
-            max="5"
-            step="0.5"
-            value={stationStopDuration}
-            onChange={(e) => setStationStopDuration(Number(e.target.value))}
-            disabled={simulationStarted}
-          />
+        <div className="selector-group">
+          <label>Station Stop Time:</label>
+          <div className="selector-options">
+            {[0.5, 1, 1.5, 2].map((value) => (
+              <button
+                key={value}
+                className={`selector-btn ${stationStopDuration === value ? 'selected' : ''}`}
+                onClick={() => setStationStopDuration(value)}
+                disabled={simulationStarted}
+              >
+                {value}s
+              </button>
+            ))}
+          </div>
         </div>
         <div className="velocity-display">
           Red: {Math.round(redVelocity)} px/s | Blue: {Math.round(blueVelocity)} px/s

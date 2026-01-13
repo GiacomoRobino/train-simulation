@@ -235,6 +235,49 @@ h1 {
   cursor: not-allowed;
 }
 
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.selector-group label {
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.selector-options {
+  display: flex;
+  gap: 8px;
+}
+
+.selector-btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: 2px solid #6c63ff;
+  border-radius: 6px;
+  background: transparent;
+  color: #6c63ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selector-btn:hover:not(:disabled) {
+  background: rgba(108, 99, 255, 0.2);
+}
+
+.selector-btn.selected {
+  background: #6c63ff;
+  color: white;
+}
+
+.selector-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .velocity-display {
   color: #aaaaaa;
   font-size: 0.9rem;
