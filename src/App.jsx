@@ -6,6 +6,7 @@ function App() {
   const [isFinished, setIsFinished] = useState(false)
   const [maxSpeed, setMaxSpeed] = useState(200)
   const [acceleration, setAcceleration] = useState(50)
+  const [stationStopDuration, setStationStopDuration] = useState(0.5)
 
   // Red train state
   const [redPosition, setRedPosition] = useState(0)
@@ -52,15 +53,14 @@ function App() {
   })
 
   const TRAIN_WIDTH = 80
-  const STATION_STOP_DURATION = 1 // seconds
 
-  const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel) => {
+  const updateTrain = (state, stations, trackWidth, deltaTime, maxSpd, accel, stopDuration) => {
     const newState = { ...state, passedStations: new Set(state.passedStations) }
 
     // If at station, handle stop
     if (newState.atStation) {
       newState.stationStopTime += deltaTime
-      if (newState.stationStopTime >= STATION_STOP_DURATION) {
+      if (newState.stationStopTime >= stopDuration) {
         newState.atStation = false
         newState.currentStationPassed = true
       }
@@ -157,7 +157,8 @@ function App() {
           trackWidth,
           deltaTime,
           maxSpeed,
-          acceleration
+          acceleration,
+          stationStopDuration
         )
         redRef.current = redState
         setRedPosition(redState.position)
@@ -176,7 +177,8 @@ function App() {
           trackWidth,
           deltaTime,
           maxSpeed,
-          acceleration
+          acceleration,
+          stationStopDuration
         )
         blueRef.current = blueState
         setBluePosition(blueState.position)
@@ -219,7 +221,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isRunning, isFinished, maxSpeed, acceleration, redStations, blueStations])
+  }, [isRunning, isFinished, maxSpeed, acceleration, redStations, blueStations, stationStopDuration])
 
   const handleStart = () => {
     setIsRunning(true)
@@ -405,6 +407,18 @@ function App() {
             max="200"
             value={acceleration}
             onChange={(e) => setAcceleration(Number(e.target.value))}
+            disabled={simulationStarted}
+          />
+        </div>
+        <div className="slider-group">
+          <label>Station Stop: {stationStopDuration}s</label>
+          <input
+            type="range"
+            min="0.5"
+            max="5"
+            step="0.5"
+            value={stationStopDuration}
+            onChange={(e) => setStationStopDuration(Number(e.target.value))}
             disabled={simulationStarted}
           />
         </div>
