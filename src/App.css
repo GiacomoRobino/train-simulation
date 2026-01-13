@@ -69,8 +69,9 @@ h1 {
 .track {
   position: relative;
   width: 100%;
-  height: 60px;
+  height: 80px;
   cursor: default;
+  margin-top: 40px;
 }
 
 .track-placing {
@@ -127,16 +128,92 @@ h1 {
   border: 2px solid #0000aa;
 }
 
-.station {
+.station-container {
   position: absolute;
-  width: 20px;
-  height: 20px;
   top: 50%;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  border: 2px solid #1B5E20;
-  border-radius: 3px;
-  z-index: 1;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+
+.station-label {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.station-name {
+  color: #4CAF50;
+  font-size: 0.9rem;
+  font-weight: bold;
+  background: rgba(26, 26, 46, 0.9);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.station-name-input {
+  width: 100px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  border: 1px solid #4CAF50;
+  border-radius: 4px;
+  background: rgba(26, 26, 46, 0.95);
+  color: #4CAF50;
+  outline: none;
+}
+
+.station-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.station-edit-btn,
+.station-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.station-edit-btn {
+  background: #2196F3;
+  color: white;
+}
+
+.station-edit-btn:hover {
+  background: #1976D2;
+}
+
+.station-delete-btn {
+  background: #f44336;
+  color: white;
+}
+
+.station-delete-btn:hover {
+  background: #d32f2f;
+}
+
+.station {
+  width: 36px;
+  height: 36px;
+  transform: translateY(-50%);
+  background: radial-gradient(circle at 30% 30%, #81C784, #4CAF50, #2E7D32);
+  border: 3px solid #1B5E20;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), inset 0 -3px 6px rgba(0, 0, 0, 0.2);
 }
 
 .station-btn {

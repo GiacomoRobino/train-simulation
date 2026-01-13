@@ -16,6 +16,7 @@ function App() {
   const [redStations, setRedStations] = useState([])
   const [redAtStation, setRedAtStation] = useState(false)
   const [redPlacingStation, setRedPlacingStation] = useState(false)
+  const [redStationCount, setRedStationCount] = useState(0)
 
   // Blue train state
   const [bluePosition, setBluePosition] = useState(0)
@@ -25,6 +26,10 @@ function App() {
   const [blueStations, setBlueStations] = useState([])
   const [blueAtStation, setBlueAtStation] = useState(false)
   const [bluePlacingStation, setBluePlacingStation] = useState(false)
+  const [blueStationCount, setBlueStationCount] = useState(0)
+
+  // Editing state
+  const [editingStation, setEditingStation] = useState(null)
 
   const animationRef = useRef(null)
   const lastTimeRef = useRef(null)
@@ -68,10 +73,10 @@ function App() {
     }
 
     // Mark current station as passed after leaving
-    if (newState.currentStationPassed && newState.currentStationIndex !== undefined) {
-      newState.passedStations.add(newState.currentStationIndex)
+    if (newState.currentStationPassed && newState.currentStationId !== undefined) {
+      newState.passedStations.add(newState.currentStationId)
       newState.currentStationPassed = false
-      newState.currentStationIndex = undefined
+      newState.currentStationId = undefined
     }
 
     const currentPos = newState.position
@@ -79,15 +84,15 @@ function App() {
 
     // Find next target (next station or end)
     let targetPos = trackWidth
-    let nextStationIndex = -1
+    let nextStationId = null
 
-    // Sort stations and find the next one
-    const sortedStations = [...stations].map((pos, idx) => ({ pos, idx })).sort((a, b) => a.pos - b.pos)
+    // Sort stations by position and find the next one
+    const sortedStations = [...stations].sort((a, b) => a.position - b.position)
 
-    for (const { pos, idx } of sortedStations) {
-      if (pos > currentPos && !newState.passedStations.has(idx)) {
-        targetPos = pos
-        nextStationIndex = idx
+    for (const station of sortedStations) {
+      if (station.position > currentPos && !newState.passedStations.has(station.id)) {
+        targetPos = station.position
+        nextStationId = station.id
         break
       }
     }
@@ -112,12 +117,12 @@ function App() {
     newPosition = currentPos + newVelocity * deltaTime
 
     // Check if reached a station
-    if (nextStationIndex !== -1 && newPosition >= targetPos && currentPos < targetPos) {
+    if (nextStationId !== null && newPosition >= targetPos && currentPos < targetPos) {
       newPosition = targetPos
       newVelocity = 0
       newState.atStation = true
       newState.stationStopTime = 0
-      newState.currentStationIndex = nextStationIndex
+      newState.currentStationId = nextStationId
     }
 
     // Clamp to track end
@@ -271,6 +276,8 @@ function App() {
   const handleClearStations = () => {
     setRedStations([])
     setBlueStations([])
+    setRedStationCount(0)
+    setBlueStationCount(0)
   }
 
   const handleAddRedStation = () => {
@@ -294,7 +301,13 @@ function App() {
     const maxPos = rect.width - 20
     const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
 
-    setRedStations(prev => [...prev, stationPos])
+    const newCount = redStationCount + 1
+    setRedStations(prev => [...prev, {
+      id: newCount,
+      position: stationPos,
+      name: `Station_${newCount}`
+    }])
+    setRedStationCount(newCount)
     setRedPlacingStation(false)
   }
 
@@ -309,8 +322,44 @@ function App() {
     const maxPos = rect.width - 20
     const stationPos = Math.max(minPos, Math.min(maxPos, clickX))
 
-    setBlueStations(prev => [...prev, stationPos])
+    const newCount = blueStationCount + 1
+    setBlueStations(prev => [...prev, {
+      id: newCount,
+      position: stationPos,
+      name: `Station_${newCount}`
+    }])
+    setBlueStationCount(newCount)
     setBluePlacingStation(false)
+  }
+
+  const handleDeleteRedStation = (id) => {
+    setRedStations(prev => prev.filter(s => s.id !== id))
+  }
+
+  const handleDeleteBlueStation = (id) => {
+    setBlueStations(prev => prev.filter(s => s.id !== id))
+  }
+
+  const handleEditStation = (track, id) => {
+    setEditingStation({ track, id })
+  }
+
+  const handleSaveStationName = (e, track, id) => {
+    const newName = e.target.value.trim() || `Station_${id}`
+    if (track === 'red') {
+      setRedStations(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s))
+    } else {
+      setBlueStations(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s))
+    }
+    setEditingStation(null)
+  }
+
+  const handleKeyDown = (e, track, id) => {
+    if (e.key === 'Enter') {
+      handleSaveStationName(e, track, id)
+    } else if (e.key === 'Escape') {
+      setEditingStation(null)
+    }
   }
 
   const formatTime = (time) => {
@@ -318,6 +367,48 @@ function App() {
   }
 
   const simulationStarted = isRunning || isFinished || redVelocity > 0 || redPosition > 0
+
+  const renderStation = (station, track) => {
+    const isEditing = editingStation?.track === track && editingStation?.id === station.id
+
+    return (
+      <div key={station.id} className="station-container" style={{ left: `${station.position}px` }}>
+        <div className="station-label">
+          {isEditing ? (
+            <input
+              type="text"
+              className="station-name-input"
+              defaultValue={station.name}
+              autoFocus
+              onBlur={(e) => handleSaveStationName(e, track, station.id)}
+              onKeyDown={(e) => handleKeyDown(e, track, station.id)}
+            />
+          ) : (
+            <span className="station-name">{station.name}</span>
+          )}
+          {!simulationStarted && (
+            <div className="station-buttons">
+              <button
+                className="station-edit-btn"
+                onClick={() => handleEditStation(track, station.id)}
+                title="Edit name"
+              >
+                ✎
+              </button>
+              <button
+                className="station-delete-btn"
+                onClick={() => track === 'red' ? handleDeleteRedStation(station.id) : handleDeleteBlueStation(station.id)}
+                title="Delete station"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="station"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="simulation-container">
@@ -345,9 +436,7 @@ function App() {
             onClick={handleRedTrackClick}
           >
             <div className="track-line"></div>
-            {redStations.map((pos, index) => (
-              <div key={index} className="station" style={{ left: `${pos}px` }}></div>
-            ))}
+            {redStations.map(station => renderStation(station, 'red'))}
             <div
               className="train red-train"
               style={{ left: `${redPosition}px` }}
@@ -376,9 +465,7 @@ function App() {
             onClick={handleBlueTrackClick}
           >
             <div className="track-line"></div>
-            {blueStations.map((pos, index) => (
-              <div key={index} className="station" style={{ left: `${pos}px` }}></div>
-            ))}
+            {blueStations.map(station => renderStation(station, 'blue'))}
             <div
               className="train blue-train"
               style={{ left: `${bluePosition}px` }}
